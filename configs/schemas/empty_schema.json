@@ -1,0 +1,18 @@
+{
+  "fixedFields": {
+    "capability": "",
+    "systematizedConcept": "",
+    "deploymentPopulation": "",
+    "contextualConstraints": "",
+    "systematizedInstance": ""
+  },
+  "constituents": {
+    "": {
+      "required": true,
+      "possibleValues": "multiple",
+      "value": [
+      ]
+    }
+  },
+  "seedExamples": []
+}

@@ -1,0 +1,13 @@
+# Requires Python 3.10 or newer.
+# Install with: python3 -m pip install -r requirements.txt
+
+anthropic
+litellm
+matplotlib
+numpy
+openai
+pandas
+POT
+scikit-learn
+scipy
+sentence-transformers

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Form</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: #f4f4f9; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.5; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h2, h3 { color: #2c3e50; margin-top: 0; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
+        .helper-text { font-size: 0.85em; color: #666; margin-bottom: 8px; display: block; }
+        
+        /* Rich Text Editor */
+        .editor-toolbar { margin-bottom: 5px; }
+        .editor-toolbar button { background: #eee; border: 1px solid #ccc; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold;}
+        .editor-toolbar button:hover { background: #ddd; }
+        .rich-editor { min-height: 80px; border: 1px solid #ccc; padding: 10px; border-radius: 4px; background: #fff; cursor: text; }
+        .rich-editor:focus { outline: 2px solid #3498db; border-color: transparent; }
+
+        /* Constituent Styling */
+        .constituent-block { border: 1px solid #e0e0e0; border-left: 5px solid #3498db; padding: 15px; margin-top: 15px; background: #fafafa; border-radius: 4px; position: relative; }
+        .sub-constituents { margin-left: 25px; border-left: 2px dashed #ccc; padding-left: 15px; margin-top: 10px; }
+        
+        /* Buttons */
+        .btn { border: none; padding: 8px 14px; cursor: pointer; border-radius: 4px; font-size: 13px; transition: opacity 0.2s; }
+        .btn:hover { opacity: 0.8; }
+        .btn-upload { background-color: #7f8c8d; color: white; font-weight: bold; display: inline-block; }
+        .btn-add { background-color: #2ecc71; color: white; font-weight: bold; margin-bottom: 10px; }
+        .btn-sync { background-color: #f39c12; color: white; margin-top: 5px; font-weight: bold; }
+        .btn-remove { background-color: #e74c3c; color: white; margin-top: 10px;}
+        .btn-export { background-color: #9b59b6; color: white; font-size: 18px; padding: 15px; width: 100%; margin-top: 40px; font-weight: bold; }
+        
+        /* Logic Options & Dynamic Fields */
+        .logic-options { margin-top: 10px; font-size: 0.9em; background: #eee; padding: 10px; border-radius: 4px; line-height: 1.8; }
+        .logic-options label { font-weight: normal; display: inline; cursor: pointer; margin-right: 15px; }
+        .seed-block { display: flex; gap: 10px; margin-bottom: 10px; }
+        .seed-block textarea { flex-grow: 1; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 30px 0; }
+
+        /* Modal Styles */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal.hidden { display: none; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 85%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .md-rendered-preview { background: #f9f9f9; border: 1px solid #ddd; padding: 20px; border-radius: 6px; overflow-y: auto; flex-grow: 1; min-height: 300px; max-height: 50vh; }
+        .md-rendered-preview h1 { margin-top: 0; font-size: 1.5em; }
+        .md-rendered-preview h2 { font-size: 1.3em; margin-top: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .md-rendered-preview h3 { font-size: 1.1em; }
+        .md-rendered-preview ul { padding-left: 20px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-actions">
+        <h2>Schema Data Entry</h2>
+        <div>
+            <label for="fileUpload" class="btn btn-upload">Upload Existing JSON</label>
+            <input type="file" id="fileUpload" accept=".json" style="display: none;" onchange="loadJSON(event)">
+        </div>
+    </div>
+    
+    <p>This schema seeks to capture the essential elements of your systematization. This schema is intended to provide the foundation for synthetic generation of an evaluation dataset. Fill out the definition fields below, then add custom constituents to build out your systematized concept.</p>
+
+    <div id="fixed-fields">
+        <h3>Schema Definition</h3>
+        
+        <div class="form-group">
+            <label for="capability">Capability being measured</label>
+            <span class="helper-text">e.g., The presence of misinformation</span>
+            <input type="text" id="capability">
+        </div>
+
+        <div class="form-group">
+            <label>Systematized concept</label>
+            <span class="helper-text">The high-level concept you would like to measure. This should be context-agnostic. You may bold the constituents to this systematized concept to have it automatically extracted for when you need to fill in the contextual information below. e.g., Misinformation is [[fake controversies]] associated with [[prominent political figures]]…</span>
+            <div class="editor-toolbar">
+                <button type="button" onclick="document.execCommand('bold', false, null);" title="Bold selected text">B</button>
+            </div>
+            <div id="systematizedConcept" class="rich-editor" contenteditable="true"></div>
+            <button class="btn btn-sync" onclick="extractConstituents()">Extract Constituents</button>
+        </div>
+
+        <div style="background: #fdfbf7; padding: 15px; border: 1px dashed #ccc; border-radius: 6px; margin: 20px 0;">
+            <h3>Constituents of the systematized concept</h3>
+            <span class="helper-text">Add independent fields for the concept. For each, provide a single value or a comma-separated list of relevant factors. For example, the constituents for misinformation might include "fake controversies" and "prominent political figures". The values for "fake controversies" could be: "death, dating scandal, crime".</span>
+            <div id="root-constituents"></div>
+            <button class="btn btn-add" onclick="addConstituent('root-constituents')" style="margin-top: 15px;">+ Add Constituent</button>
+        </div>
+
+        <div class="form-group">
+            <label for="deploymentPopulation">Intended deployment population</label>
+            <span class="helper-text">The population that would be expected to provide the prompts. e.g., General public seeking political information</span>
+            <input type="text" id="deploymentPopulation">
+        </div>
+
+        <div class="form-group">
+            <label for="contextualConstraints">Contextual constraints</label>
+            <span class="helper-text">Context-specific factors that limit the scope of dataset instances. e.g., country X, 2024 election</span>
+            <input type="text" id="contextualConstraints">
+        </div>
+
+        <div class="form-group">
+            <label for="systematizedInstance">Systematized instance</label>
+            <span class="helper-text">The expected structure or contents of individual examples. e.g., Each instance must contain at least one political figure, one controversy, and resemble prompts written by country X residents. Country X residents may provide some background information on their lifestyle and political affiliation.</span>
+            <textarea id="systematizedInstance" rows="2"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Seed examples (minimum 5)</label>
+            <span class="helper-text">Test cases representing the level of detail and format desired from generated data. It is best to provide a diverse set of of examples (e.g., with varying levels of detail, writing styles).</span>
+            <div id="seed-examples-container"></div>
+            <button class="btn btn-add" onclick="addSeedExample()">+ Add Seed Example</button>
+        </div>
+    </div>
+
+    <hr>
+    <button class="btn btn-export" onclick="previewExport()">Finalize Schema</button>
+</div>
+
+<div id="exportModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 style="margin-top: 0;">Preview</h3>
+        <p class="helper-text">Review the generated schema below. You can go back to edit, or download the schema. Note if you exit without downloading, nothing will be saved.</p>
+        
+        <div id="mdPreview" class="md-rendered-preview"></div>
+        
+        <div class="modal-actions">
+            <button class="btn" style="background-color: #7f8c8d; color: white; padding: 12px 20px; font-size: 16px; font-weight: bold;" onclick="closeModal()">Back to Edit</button>
+            <button class="btn btn-add" style="margin-bottom: 0; padding: 12px 20px; font-size: 16px; flex-grow: 1;" onclick="downloadFiles()">Download Schema</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentJSON = "";
+    let currentMD = "";
+
+    // 1. Explicit Keyboard Shortcuts for Bold
+    document.getElementById('systematizedConcept').addEventListener('keydown', function(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            document.execCommand('bold', false, null);
+        }
+    });
+
+    // 2. Systematized Concept Bold Extraction
+    function extractConstituents() {
+        const editor = document.getElementById('systematizedConcept');
+        const boldElements = editor.querySelectorAll('b, strong');
+        const container = document.getElementById('root-constituents');
+        
+        const existingNames = Array.from(container.children).map(c => {
+            const input = c.querySelector('.const-name');
+            return input ? input.value.trim().toLowerCase() : '';
+        });
+
+        let addedCount = 0;
+        boldElements.forEach(el => {
+            const term = el.innerText.trim();
+            if (term && !existingNames.includes(term.toLowerCase())) {
+                addConstituent('root-constituents', term);
+                existingNames.push(term.toLowerCase());
+                addedCount++;
+            }
+        });
+        
+        if(addedCount > 0) alert(`Extracted ${addedCount} new constituent(s)!`);
+    }
+
+    // 3. Dynamic Constituents
+    function addConstituent(containerId, defaultName = '') {
+        const container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
+        const block = document.createElement('div');
+        block.className = 'constituent-block';
+        const uniqueId = Math.random().toString(36).substring(2, 9);
+        const subId = 'sub-' + uniqueId;
+
+        block.innerHTML = `
+            <div class="form-group">
+                <label>Constituent Name:</label>
+                <input type="text" class="const-name" value="${defaultName}">
+            </div>
+            
+            <div class="form-group value-group">
+                <label>Value(s): <small>(Separate with commas)</small></label>
+                <input type="text" class="const-val">
+            </div>
+
+            <div class="logic-options">
+                <div>
+                    <label><input type="checkbox" class="logic-required" checked> Required</label>
+                </div>
+                <div>
+                    Possible values: 
+                    <label><input type="radio" name="logic_val_${uniqueId}" value="one" checked> One</label>
+                    <label><input type="radio" name="logic_val_${uniqueId}" value="multiple"> Multiple (one or more)</label>
+                </div>
+            </div>
+            
+            <div class="sub-constituents" id="${subId}"></div>
+            
+            <button class="btn btn-add" onclick="addSubConstituent(this, '${subId}')">+ Add Sub-Constituent</button>
+            <button class="btn btn-remove" onclick="this.parentElement.remove()">Remove Constituent</button>
+        `;
+        container.appendChild(block);
+        
+        return { block, uniqueId, subId };
+    }
+
+    function addSubConstituent(buttonElement, subContainerId) {
+        const parentBlock = buttonElement.closest('.constituent-block');
+        const valueGroup = parentBlock.querySelector('.value-group');
+        const logicGroup = parentBlock.querySelector('.logic-options');
+        
+        if (valueGroup) valueGroup.style.display = 'none';
+        if (logicGroup) logicGroup.style.display = 'none';
+        
+        addConstituent(subContainerId);
+    }
+
+    // 4. Dynamic Seed Examples
+    function addSeedExample(value = "") {
+        const container = document.getElementById('seed-examples-container');
+        const block = document.createElement('div');
+        block.className = 'seed-block';
+        block.innerHTML = `
+            <textarea class="seed-val" rows="2" placeholder="Enter one complete seed example here...">${value}</textarea>
+            <button class="btn btn-remove" style="margin-top:0;" onclick="this.parentElement.remove()">X</button>
+        `;
+        container.appendChild(block);
+    }
+
+    window.onload = () => addSeedExample();
+
+    // 5. Data Parsing & Modal Export
+    function buildConstituentJSON(container) {
+        let result = {};
+        let blocks = Array.from(container.children).filter(c => c.classList.contains('constituent-block'));
+        
+        for (let block of blocks) {
+            let name = block.querySelector('.const-name').value.trim().toLowerCase();
+            let subContainer = block.querySelector('.sub-constituents');
+            let subConstituents = buildConstituentJSON(subContainer);
+
+            if (name) {
+                if (Object.keys(subConstituents).length > 0) {
+                    result[name] = { subConstituents: subConstituents };
+                } else {
+                    let isRequired = block.querySelector('.logic-required').checked;
+                    let radios = block.querySelectorAll('input[type="radio"]');
+                    let valType = Array.from(radios).find(r => r.checked)?.value || "one";
+                    
+                    let valueStr = block.querySelector('.const-val').value.trim().toLowerCase();
+                    let values = valueStr.split(',').map(s => s.trim()).filter(s => s !== "");
+                    
+                    result[name] = { 
+                        required: isRequired,
+                        possibleValues: valType,
+                        value: values.length === 1 ? values[0] : (values.length === 0 ? null : values)
+                    };
+                }
+            }
+        }
+        return result;
+    }
+
+    function getSeedExamples() {
+        let textareas = document.querySelectorAll('.seed-val');
+        return Array.from(textareas).map(ta => ta.value.trim()).filter(val => val !== "");
+    }
+
+    function generateMarkdown(data) {
+        let md = `# Schema\n\n`;
+        md += `## Context-Agnostic Definitions\n`;
+        md += `- **Capability:** ${data.fixedFields.capability || 'N/A'}\n`;
+        md += `- **Systematized concept:** ${data.fixedFields.systematizedConcept || 'N/A'}\n`;
+        
+        md += `\n### Constituents of the Systematized Concept\n`;
+        if (Object.keys(data.constituents).length === 0) {
+            md += "*No constituents added.*\n";
+        } else {
+            md += generateMarkdownList(data.constituents, 0);
+        }
+
+        md += `\n## Population\n`;
+        md += `- **Intended deployment population:** ${data.fixedFields.deploymentPopulation || 'N/A'}\n`;
+        md += `- **Contextual constraints:** ${data.fixedFields.contextualConstraints || 'N/A'}\n`;
+        
+        md += `\n## Dataset Instances\n`;
+        md += `**Systematized instance:**\n\n${data.fixedFields.systematizedInstance || 'N/A'}\n\n`;
+        md += `**Seed examples:**\n`;
+        
+        if(data.seedExamples.length === 0) {
+            md += "*None provided.*\n";
+        } else {
+            data.seedExamples.forEach((ex, i) => md += `${i+1}. ${ex}\n`);
+        }
+        return md;
+    }
+
+    function generateMarkdownList(constituents, level) {
+        let md = "";
+        let indent = "  ".repeat(level); 
+        
+        for (let key in constituents) {
+            if (constituents[key].subConstituents) {
+                md += `${indent}- **${key}**\n`;
+                md += generateMarkdownList(constituents[key].subConstituents, level + 1);
+            } else {
+                let req = constituents[key].required ? "Required" : "Optional";
+                let pVal = constituents[key].possibleValues;
+                let valInfo = `*(${req}, Possible values: ${pVal})*`;
+                let val = constituents[key].value;
+                let valDisplay = Array.isArray(val) ? `[${val.join(', ')}]` : (val || "None");
+                
+                md += `${indent}- **${key}** ${valInfo}: ${valDisplay}\n`;
+            }
+        }
+        return md;
+    }
+
+function previewExport() {
+        // Grab the raw HTML, convert bold tags to Markdown, and strip leftover HTML
+        let rawConceptHTML = document.getElementById('systematizedConcept').innerHTML;
+        let mdConcept = rawConceptHTML
+            .replace(/<\/?(b|strong)[^>]*>/gi, '**') // Convert HTML bold to Markdown bold
+            .replace(/<div>|<br\s*[\/]?>/gi, '\n')   // Preserve line breaks from the editor
+            .replace(/<[^>]*>?/gm, '');              // Strip any remaining HTML tags
+
+        const data = {
+            fixedFields: {
+                capability: document.getElementById('capability').value,
+                systematizedConcept: mdConcept,
+                deploymentPopulation: document.getElementById('deploymentPopulation').value,
+                contextualConstraints: document.getElementById('contextualConstraints').value,
+                systematizedInstance: document.getElementById('systematizedInstance').value
+            },
+            constituents: buildConstituentJSON(document.getElementById('root-constituents')),
+            seedExamples: getSeedExamples()
+        };
+
+        currentJSON = JSON.stringify(data, null, 2);
+        currentMD = generateMarkdown(data);
+
+        // Parse and render the Markdown to HTML using marked.js
+        document.getElementById('mdPreview').innerHTML = marked.parse(currentMD);
+        document.getElementById('exportModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('exportModal').classList.add('hidden');
+    }
+
+    function downloadFiles() {
+        downloadFile(currentJSON, 'schema_data.json', 'application/json');
+        setTimeout(() => {
+            downloadFile(currentMD, 'schema_data.md', 'text/markdown');
+        }, 500);
+    }
+
+    function downloadFile(content, fileName, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // 6. JSON File Upload and Form Parsing
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+    }
+
+    function loadJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                populateForm(data);
+                event.target.value = ""; 
+            } catch (err) {
+                alert("Error parsing JSON file. Please ensure it is a valid schema JSON.");
+                console.error(err);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function populateForm(data) {
+        if (data.fixedFields) {
+            document.getElementById('capability').value = data.fixedFields.capability || '';
+            document.getElementById('deploymentPopulation').value = data.fixedFields.deploymentPopulation || '';
+            document.getElementById('contextualConstraints').value = data.fixedFields.contextualConstraints || '';
+            document.getElementById('systematizedInstance').value = data.fixedFields.systematizedInstance || '';
+            
+            let conceptText = data.fixedFields.systematizedConcept || '';
+            if (data.constituents && Object.keys(data.constituents).length > 0) {
+                const rootKeys = Object.keys(data.constituents);
+                rootKeys.forEach(key => {
+                    const regex = new RegExp(`(${escapeRegExp(key)})`, "gi");
+                    conceptText = conceptText.replace(regex, "<b>$1</b>");
+                });
+            }
+            document.getElementById('systematizedConcept').innerHTML = conceptText;
+        }
+
+        const rootContainer = document.getElementById('root-constituents');
+        rootContainer.innerHTML = ''; 
+        if (data.constituents) {
+            loadConstituentsRecursive(rootContainer, data.constituents);
+        }
+
+        const seedContainer = document.getElementById('seed-examples-container');
+        seedContainer.innerHTML = ''; 
+        if (data.seedExamples && data.seedExamples.length > 0) {
+            data.seedExamples.forEach(ex => addSeedExample(ex));
+        } else {
+            addSeedExample(); 
+        }
+    }
+
+    function loadConstituentsRecursive(container, constituentsData) {
+        for (const [name, data] of Object.entries(constituentsData)) {
+            const elementInfo = addConstituent(container.id || container, name);
+            const block = elementInfo.block;
+
+            if (data.subConstituents) {
+                const valueGroup = block.querySelector('.value-group');
+                const logicGroup = block.querySelector('.logic-options');
+                if (valueGroup) valueGroup.style.display = 'none';
+                if (logicGroup) logicGroup.style.display = 'none';
+
+                const subContainer = block.querySelector('.sub-constituents');
+                loadConstituentsRecursive(subContainer, data.subConstituents);
+            } else {
+                const reqCheckbox = block.querySelector('.logic-required');
+                if (data.required !== undefined) reqCheckbox.checked = data.required;
+                
+                const valRadios = block.querySelectorAll(`input[type="radio"][name="logic_val_${elementInfo.uniqueId}"]`);
+                valRadios.forEach(r => {
+                    if (r.value === data.possibleValues) r.checked = true;
+                });
+
+                if (data.value) {
+                    const valInput = block.querySelector('.const-val');
+                    if (Array.isArray(data.value)) {
+                        valInput.value = data.value.join(', ');
+                    } else {
+                        valInput.value = data.value;
+                    }
+                }
+            }
+        }
+    }
+</script>
+</body>
+</html>

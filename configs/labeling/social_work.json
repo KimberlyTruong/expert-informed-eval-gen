@@ -1,0 +1,9 @@
+{
+  "columns": {
+    "actors": ["child", "teacher", "guardian", "supervisor", "specialist", "paraprofessional", "peer(s)", "other staff"],
+    "observations": ["child dysregulation", "difficult teacher-child interactions", "classroom dynamics", "emotional problem solving", "teacher-teacher interactions", "transitions", "engagement", "communication challenges", "difficult environmental condition (i.e., loud, bright, chaotic)"],
+    "assumptions": ["cause of child's difficult behavior", "teacher's involvement (i.e., teacher's intentions, teacher's beliefs, teacher's capacity, teacher's disposition or strengths)", "nature of relationships", "writer's role in supporting the classroom", "child's home dynamics", "cultural impacts"],
+    "early-conclusions": ["helping teachers empathize with child", "exploring teachers' assumptions", "helping teachers understand child behavior", "proposing relationship building strategies", "looking at classroom routine and structure", "exploring what might be going on in child's brainstates", "helping teachers understand their capacity and wellbeing and how that impacts the classroom", "exploring environmental modifications", "supporting co-regulation", "identifying realistic shifts that could be put into play", "helping the writer empathize with the teacher"],
+    "(expected) explanation type": ["relevance to the teacher's current practice", "best environment or phrasing to raise the question", "accompanying resources from the knowledge base to ground the reflection in existing studies", "how the writer's or members of the teaching team's thinking will be opened/impacted by the question"]
+  }
+}
